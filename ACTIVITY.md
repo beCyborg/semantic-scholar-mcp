@@ -113,6 +113,29 @@ Append activity log at bottom. Follow the template:
 
 ---
 
+### 2026-02-01 22:27 (CET)
+
+**Tasks completed:** US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8, US-9
+
+**Current task:** US-10 - Fix invalidate() method for pattern matching
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/cache.py`:
+  - Added `invalidate()` method that iterates through cache entries
+  - Checks if endpoint_pattern is in entry.endpoint for pattern matching
+  - Collects keys to remove and deletes only matching entries
+  - Returns count of invalidated entries
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (3 pre-existing issues in other files)
+- pytest: PASS (184 passed, 6 deselected)
+
+**Blockers:** None
+
+---
+
 ### 2026-02-01 22:26 (CET)
 
 **Tasks completed:** US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8

@@ -160,6 +160,23 @@ class ResponseCache:
             self._cache.clear()
             self._stats = {"hits": 0, "misses": 0}
 
+    def invalidate(self, endpoint_pattern: str) -> int:
+        """Invalidate cached entries matching pattern.
+
+        Args:
+            endpoint_pattern: Substring to match in endpoint (e.g., "/paper/")
+
+        Returns:
+            Number of entries invalidated.
+        """
+        with self._lock:
+            keys_to_remove = [
+                key for key, entry in self._cache.items() if endpoint_pattern in entry.endpoint
+            ]
+            for key in keys_to_remove:
+                del self._cache[key]
+            return len(keys_to_remove)
+
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
