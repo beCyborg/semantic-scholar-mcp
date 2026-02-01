@@ -8,6 +8,8 @@ from semantic_scholar_mcp.exceptions import RateLimitError
 from semantic_scholar_mcp.rate_limiter import (
     RateLimiter,
     RetryConfig,
+    TokenBucket,
+    create_rate_limiter,
     with_retry,
 )
 
@@ -221,3 +223,104 @@ class TestRateLimitErrorRetryAfter:
         """Test that error message is preserved."""
         error = RateLimitError("Custom message", retry_after=10.0)
         assert str(error) == "Custom message"
+
+
+class TestTokenBucket:
+    """Tests for TokenBucket class."""
+
+    @pytest.mark.asyncio
+    async def test_acquire_returns_zero_when_tokens_available(self) -> None:
+        """Test that acquire() returns 0 when tokens are available."""
+        bucket = TokenBucket(rate=10.0, capacity=10.0)
+
+        # Bucket starts full, so acquire should return 0
+        wait_time = await bucket.acquire(1.0)
+        assert wait_time == 0.0
+
+        # Can acquire multiple tokens if available
+        wait_time = await bucket.acquire(5.0)
+        assert wait_time == 0.0
+
+    @pytest.mark.asyncio
+    async def test_acquire_waits_when_tokens_unavailable(self) -> None:
+        """Test that acquire() waits when tokens are unavailable."""
+        bucket = TokenBucket(rate=10.0, capacity=2.0)
+
+        # Use all tokens
+        await bucket.acquire(2.0)
+
+        # Mock sleep to avoid actual waiting
+        with patch(
+            "semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock
+        ) as mock_sleep:
+            wait_time = await bucket.acquire(1.0)
+
+            # Should have waited (1 token / 10 tokens per second = 0.1 seconds)
+            assert wait_time > 0
+            mock_sleep.assert_called_once()
+            assert mock_sleep.call_args[0][0] == pytest.approx(0.1, rel=0.01)
+
+    @pytest.mark.asyncio
+    async def test_token_replenishment_over_time(self) -> None:
+        """Test that tokens are replenished based on elapsed time."""
+        bucket = TokenBucket(rate=10.0, capacity=10.0)
+
+        # Use all tokens
+        await bucket.acquire(10.0)
+
+        # Simulate time passing by manually updating last_update
+        import time
+
+        bucket._last_update = time.monotonic() - 0.5  # 0.5 seconds ago
+
+        # Should now have ~5 tokens (10 rate * 0.5 seconds)
+        # Acquiring 5 tokens should not need to wait
+        with patch(
+            "semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock
+        ) as mock_sleep:
+            wait_time = await bucket.acquire(5.0)
+
+            # Should not have waited since tokens replenished
+            assert wait_time == 0.0
+            mock_sleep.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_capacity_limits_token_accumulation(self) -> None:
+        """Test that tokens don't exceed capacity."""
+        bucket = TokenBucket(rate=10.0, capacity=5.0)
+
+        # Simulate a long time passing
+        import time
+
+        bucket._last_update = time.monotonic() - 100.0  # 100 seconds ago
+
+        # Even with long time passed, should only have capacity (5) tokens
+        # Acquiring 5 should work, acquiring more should wait
+        await bucket.acquire(5.0)
+
+        # Now bucket should be empty, acquire should wait
+        with patch(
+            "semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock
+        ) as mock_sleep:
+            await bucket.acquire(1.0)
+            mock_sleep.assert_called_once()
+
+
+class TestCreateRateLimiter:
+    """Tests for create_rate_limiter factory function."""
+
+    def test_with_api_key_returns_strict_bucket(self) -> None:
+        """Test that with API key returns 1 req/sec bucket."""
+        bucket = create_rate_limiter(has_api_key=True)
+
+        assert isinstance(bucket, TokenBucket)
+        assert bucket.rate == 1.0
+        assert bucket.capacity == 1.0
+
+    def test_without_api_key_returns_permissive_bucket(self) -> None:
+        """Test that without API key returns more permissive bucket."""
+        bucket = create_rate_limiter(has_api_key=False)
+
+        assert isinstance(bucket, TokenBucket)
+        assert bucket.rate == 10.0
+        assert bucket.capacity == 20.0

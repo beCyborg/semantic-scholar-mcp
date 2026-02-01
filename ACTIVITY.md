@@ -745,3 +745,29 @@ Append activity log at bottom. Follow the template:
 - pytest test_server.py: PASS (37 passed)
 
 **Blockers:** None
+
+### 2026-02-01 17:09 (CET)
+
+**Tasks completed:** US-1 through US-33
+
+**Current task:** US-34 - Add unit tests for TokenBucket
+
+**Changes made:**
+- Modified `tests/test_rate_limiter.py`
+  - Added imports for `TokenBucket` and `create_rate_limiter`
+  - Added `TestTokenBucket` class with:
+    - `test_acquire_returns_zero_when_tokens_available()` - verifies no wait when tokens available
+    - `test_acquire_waits_when_tokens_unavailable()` - verifies waiting when tokens unavailable
+    - `test_token_replenishment_over_time()` - verifies token replenishment based on elapsed time
+    - `test_capacity_limits_token_accumulation()` - verifies tokens don't exceed capacity
+  - Added `TestCreateRateLimiter` class with:
+    - `test_with_api_key_returns_strict_bucket()` - verifies 1 req/sec with API key
+    - `test_without_api_key_returns_permissive_bucket()` - verifies 10 req/sec without API key
+
+**Verification:**
+- ruff format: PASS (28 files unchanged)
+- ruff check: PASS
+- ty check: PASS (3 pre-existing type errors: singleton pattern issues)
+- pytest: PASS (146 passed, 6 new tests)
+
+**Blockers:** None
