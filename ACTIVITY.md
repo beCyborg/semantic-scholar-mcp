@@ -386,3 +386,22 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (137 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:37 (CET)
+
+**Tasks completed:** US-1 through US-17
+
+**Current task:** US-18 - Create tools/ directory structure
+
+**Changes made:**
+- Created `src/semantic_scholar_mcp/tools/` directory
+- Created `src/semantic_scholar_mcp/tools/__init__.py` with package docstring and empty `__all__` list
+  - Placeholder for tool exports (will be populated in US-24)
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (3 pre-existing type errors: singleton pattern issues)
+- pytest: PASS (137 passed)
+
+**Blockers:** None

@@ -256,7 +256,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Create src/semantic_scholar_mcp/tools/__init__.py with exports for all tools",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "refactor",
