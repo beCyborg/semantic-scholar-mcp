@@ -30,6 +30,52 @@ from semantic_scholar_mcp.rate_limiter import (
 logger = logging.getLogger(__name__)
 
 
+def _is_circuit_breaker_error(error: Exception) -> bool:
+    """Check if an error should trip the circuit breaker.
+
+    Only connection errors, timeouts, and server errors (5xx) should trip the
+    circuit breaker. Client errors like 404 (NotFoundError) and 429 (RateLimitError)
+    indicate the API is working but rejecting specific requests, so they should
+    not contribute to circuit breaker failures.
+
+    Args:
+        error: The exception to check.
+
+    Returns:
+        True if the error should count as a circuit breaker failure.
+    """
+    # Connection/timeout errors should trip circuit breaker
+    if isinstance(error, (httpx.ConnectError, httpx.TimeoutException)):
+        return True
+
+    # Server errors (5xx) should trip circuit breaker
+    if isinstance(error, ServerError):
+        return True
+
+    # Our custom ConnectionError (wrapped from httpx errors) should trip circuit breaker
+    if isinstance(error, ConnectionError):
+        return True
+
+    # Rate limit (429) and not found (404) should NOT trip circuit breaker
+    # These indicate the API is working, just rejecting specific requests
+    if isinstance(error, (RateLimitError, NotFoundError)):
+        return False
+
+    # Other errors (authentication, validation, etc.) should not trip circuit breaker
+    return False
+
+
+class _NonCircuitBreakerResult:
+    """Wrapper for exceptions that should not trip the circuit breaker.
+
+    This is used to signal that the API responded (circuit should not trip),
+    but the response was an error that should still be raised to the caller.
+    """
+
+    def __init__(self, exception: Exception) -> None:
+        self.exception = exception
+
+
 class SemanticScholarClient:
     """Async HTTP client for communicating with the Semantic Scholar API.
 
@@ -191,13 +237,12 @@ class SemanticScholarClient:
             use_recommendations_api: If True, use Recommendations API base URL.
 
         Returns:
-            Parsed JSON response data.
+            Parsed JSON response data, or _NonCircuitBreakerResult wrapping
+            an exception that should not trip the circuit breaker.
 
         Raises:
-            RateLimitError: If rate limit is exceeded.
-            NotFoundError: If resource is not found.
             ConnectionError: If connection fails or times out.
-            SemanticScholarError: For other API errors.
+            ServerError: If server returns 5xx error.
         """
         base_url = (
             self.recommendations_api_base_url
@@ -221,7 +266,14 @@ class SemanticScholarClient:
         except httpx.TimeoutException as e:
             raise ConnectionError(f"Request timed out: {e}") from e
 
-        return await self._handle_response(response, endpoint)
+        try:
+            return await self._handle_response(response, endpoint)
+        except Exception as e:
+            # Only let circuit-breaker-worthy errors propagate as exceptions
+            # Other errors (404, 429, etc.) are wrapped to prevent circuit breaker from tripping
+            if _is_circuit_breaker_error(e):
+                raise
+            return _NonCircuitBreakerResult(e)
 
     async def get(
         self,
@@ -263,6 +315,10 @@ class SemanticScholarClient:
                 "due to repeated failures."
             ) from None
 
+        # Unwrap non-circuit-breaker errors and raise them
+        if isinstance(result, _NonCircuitBreakerResult):
+            raise result.exception
+
         # Cache successful response
         cache.set(endpoint, params, result)
         return result
@@ -283,13 +339,12 @@ class SemanticScholarClient:
             use_recommendations_api: If True, use Recommendations API base URL.
 
         Returns:
-            Parsed JSON response data.
+            Parsed JSON response data, or _NonCircuitBreakerResult wrapping
+            an exception that should not trip the circuit breaker.
 
         Raises:
-            RateLimitError: If rate limit is exceeded.
-            NotFoundError: If resource is not found.
             ConnectionError: If connection fails or times out.
-            SemanticScholarError: For other API errors.
+            ServerError: If server returns 5xx error.
         """
         base_url = (
             self.recommendations_api_base_url
@@ -313,7 +368,14 @@ class SemanticScholarClient:
         except httpx.TimeoutException as e:
             raise ConnectionError(f"Request timed out: {e}") from e
 
-        return await self._handle_response(response, endpoint)
+        try:
+            return await self._handle_response(response, endpoint)
+        except Exception as e:
+            # Only let circuit-breaker-worthy errors propagate as exceptions
+            # Other errors (404, 429, etc.) are wrapped to prevent circuit breaker from tripping
+            if _is_circuit_breaker_error(e):
+                raise
+            return _NonCircuitBreakerResult(e)
 
     async def post(
         self,
@@ -342,7 +404,7 @@ class SemanticScholarClient:
         """
         # Use circuit breaker for the actual request
         try:
-            return await self._circuit_breaker.call(
+            result = await self._circuit_breaker.call(
                 self._do_post, endpoint, json_data, params, use_recommendations_api
             )
         except CircuitOpenError:
@@ -350,6 +412,12 @@ class SemanticScholarClient:
                 "Service temporarily unavailable. The circuit breaker is open "
                 "due to repeated failures."
             ) from None
+
+        # Unwrap non-circuit-breaker errors and raise them
+        if isinstance(result, _NonCircuitBreakerResult):
+            raise result.exception
+
+        return result
 
     def _get_retry_config(self) -> RetryConfig:
         """Get retry configuration from settings.

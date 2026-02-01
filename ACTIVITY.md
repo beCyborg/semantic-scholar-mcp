@@ -62,4 +62,29 @@ Append activity log at bottom. Follow the template:
 
 ---
 
+### 2026-02-01 21:46 (CET)
+
+**Tasks completed:** US-1, US-2
+
+**Current task:** US-3 - Filter circuit breaker failures to connection/server errors only
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/client.py`:
+  - Added `_is_circuit_breaker_error()` helper function to determine which errors should trip the circuit breaker
+  - Added `_NonCircuitBreakerResult` class to wrap exceptions that should not trip the circuit breaker
+  - Modified `_do_get()` to catch non-circuit-breaker errors and wrap them in `_NonCircuitBreakerResult`
+  - Modified `_do_post()` with the same pattern
+  - Modified `get()` to unwrap `_NonCircuitBreakerResult` and re-raise the original exception
+  - Modified `post()` with the same pattern
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (client.py - 3 pre-existing issues in other files)
+- pytest: PASS (178 passed, 6 deselected)
+
+**Blockers:** None
+
+---
+
 ### 2026-02-01 21:23 (CET)
