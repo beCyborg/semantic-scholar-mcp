@@ -129,7 +129,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Return TokenBucket(rate=10.0, capacity=20.0) when has_api_key is False",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

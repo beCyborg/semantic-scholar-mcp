@@ -193,3 +193,23 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (137 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:26 (CET)
+
+**Tasks completed:** US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8
+
+**Current task:** US-9 - Add create_rate_limiter() factory function
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/rate_limiter.py`
+  - Added `create_rate_limiter(has_api_key: bool)` factory function
+  - Returns `TokenBucket(rate=1.0, capacity=1.0)` when `has_api_key` is True
+  - Returns `TokenBucket(rate=10.0, capacity=20.0)` when `has_api_key` is False
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (2 pre-existing type errors unrelated to changes)
+- pytest: PASS (137 passed)
+
+**Blockers:** None

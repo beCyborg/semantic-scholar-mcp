@@ -155,6 +155,27 @@ class RateLimiter:
         return attempt < self.config.max_retries
 
 
+def create_rate_limiter(has_api_key: bool) -> TokenBucket:
+    """Create appropriate rate limiter based on authentication status.
+
+    Creates a TokenBucket configured for the appropriate rate limit based on
+    whether an API key is being used.
+
+    Args:
+        has_api_key: Whether an API key is configured.
+
+    Returns:
+        TokenBucket configured for the appropriate rate limit.
+    """
+    if has_api_key:
+        # With API key: 1 request per second (dedicated)
+        return TokenBucket(rate=1.0, capacity=1.0)
+    else:
+        # Without API key: ~16.67 requests per second (5000 per 5 min, shared)
+        # Use conservative estimate accounting for shared pool
+        return TokenBucket(rate=10.0, capacity=20.0)
+
+
 async def with_retry(
     func: Callable[..., Any],
     *args: Any,
