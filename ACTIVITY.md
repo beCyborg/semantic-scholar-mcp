@@ -798,3 +798,49 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (155 passed, 9 new tests)
 
 **Blockers:** None
+
+### 2026-02-01 17:12 (CET)
+
+**Tasks completed:** US-1 through US-35
+
+**Current task:** US-36 - Add unit tests for ResponseCache
+
+**Changes made:**
+- Created `tests/test_cache.py`
+  - Added `TestCacheEntry` class with:
+    - `test_cache_entry_not_expired()` - verifies fresh entry is not expired
+    - `test_cache_entry_expired()` - verifies old entry is expired
+  - Added `TestCacheConfig` class with:
+    - `test_default_values()` - verifies default config values
+    - `test_custom_values()` - verifies custom config values
+  - Added `TestResponseCacheGet` class with:
+    - `test_get_returns_none_for_missing_key()` - verifies None for missing key
+    - `test_get_returns_none_when_cache_disabled()` - verifies disabled cache behavior
+  - Added `TestResponseCacheSetGet` class with:
+    - `test_set_and_get_roundtrip()` - verifies set/get round-trip
+    - `test_different_params_different_cache_entries()` - verifies param isolation
+    - `test_none_params_works()` - verifies None params work
+  - Added `TestResponseCacheTTL` class with:
+    - `test_expired_entry_returns_none()` - verifies TTL expiration
+    - `test_custom_ttl_is_respected()` - verifies custom TTL
+    - `test_paper_details_use_longer_ttl()` - verifies endpoint-specific TTL
+  - Added `TestResponseCacheLRU` class with:
+    - `test_lru_eviction_at_max_entries()` - verifies LRU eviction
+    - `test_accessing_entry_updates_lru_order()` - verifies LRU order update
+  - Added `TestResponseCacheDisabled` class with:
+    - `test_set_does_nothing_when_disabled()` - verifies disabled set
+    - `test_get_returns_none_when_disabled()` - verifies disabled get
+  - Added `TestResponseCacheStats` class with:
+    - `test_get_stats_returns_correct_hit_miss_counts()` - verifies stats
+    - `test_get_stats_hit_rate_zero_when_no_requests()` - verifies zero state
+  - Added `TestResponseCacheClear` class with:
+    - `test_clear_removes_all_entries()` - verifies clear removes entries
+    - `test_clear_resets_stats()` - verifies clear resets stats
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (3 pre-existing type errors: singleton pattern issues)
+- pytest: PASS (175 passed, 20 new tests)
+
+**Blockers:** None
