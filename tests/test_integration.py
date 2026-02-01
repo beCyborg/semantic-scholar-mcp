@@ -9,6 +9,7 @@ On corporate networks with SSL inspection, set:
 
 import asyncio
 import logging
+import socket
 
 import pytest
 import pytest_asyncio
@@ -21,8 +22,26 @@ from semantic_scholar_mcp.tools.papers import get_paper_details, search_papers
 
 logger = logging.getLogger(__name__)
 
-# Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+
+def network_available() -> bool:
+    """Check if we can reach Semantic Scholar API.
+
+    Returns:
+        True if network connection to api.semanticscholar.org:443 succeeds,
+        False otherwise.
+    """
+    try:
+        socket.create_connection(("api.semanticscholar.org", 443), timeout=5)
+        return True
+    except OSError:
+        return False
+
+
+# Mark all tests in this module as integration tests and skip if network unavailable
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(not network_available(), reason="Network not available"),
+]
 
 
 @pytest_asyncio.fixture

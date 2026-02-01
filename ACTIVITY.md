@@ -113,6 +113,28 @@ Append activity log at bottom. Follow the template:
 
 ---
 
+### 2026-02-01 21:56 (CET)
+
+**Tasks completed:** US-1, US-2, US-3, US-4, US-5
+
+**Current task:** US-6 - Add network availability check for integration tests
+
+**Changes made:**
+- Modified `tests/test_integration.py`:
+  - Added import for `socket` module
+  - Added `network_available()` function that checks connectivity to api.semanticscholar.org:443 with 5 second timeout
+  - Updated `pytestmark` from single marker to list with both `pytest.mark.integration` and `pytest.mark.skipif(not network_available(), reason="Network not available")`
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (3 pre-existing issues in other files)
+- pytest: PASS (184 passed, 6 deselected)
+
+**Blockers:** None
+
+---
+
 ### 2026-02-01 21:50 (CET)
 
 **Tasks completed:** US-1, US-2, US-3, US-4
