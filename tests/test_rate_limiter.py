@@ -1,6 +1,5 @@
 """Unit tests for the rate limiter module."""
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -132,9 +131,7 @@ class TestWithRetry:
     @pytest.mark.asyncio
     async def test_retries_on_rate_limit_error(self) -> None:
         """Test that RateLimitError triggers retry."""
-        mock_func = AsyncMock(
-            side_effect=[RateLimitError("Rate limited"), "success"]
-        )
+        mock_func = AsyncMock(side_effect=[RateLimitError("Rate limited"), "success"])
         config = RetryConfig(max_retries=3, base_delay=0.01, jitter=0.0)
 
         with patch("semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock):
@@ -161,12 +158,12 @@ class TestWithRetry:
     async def test_uses_retry_after_from_error(self) -> None:
         """Test that Retry-After from error is used for delay."""
         error_with_retry_after = RateLimitError("Rate limited", retry_after=5.0)
-        mock_func = AsyncMock(
-            side_effect=[error_with_retry_after, "success"]
-        )
+        mock_func = AsyncMock(side_effect=[error_with_retry_after, "success"])
         config = RetryConfig(max_retries=3, base_delay=1.0, jitter=0.0)
 
-        with patch("semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch(
+            "semantic_scholar_mcp.rate_limiter.asyncio.sleep", new_callable=AsyncMock
+        ) as mock_sleep:
             result = await with_retry(mock_func, config=config)
 
         assert result == "success"

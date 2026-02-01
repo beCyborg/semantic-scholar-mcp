@@ -2,7 +2,7 @@
 
 import pytest
 
-from semantic_scholar_mcp.models import Author, Paper
+from semantic_scholar_mcp.models import Paper
 from semantic_scholar_mcp.paper_tracker import (
     PaperTracker,
     TrackedPaper,

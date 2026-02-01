@@ -21,7 +21,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Add log_format setting with SS_LOG_FORMAT env var (default: simple)",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "setup",

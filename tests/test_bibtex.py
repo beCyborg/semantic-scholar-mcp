@@ -1,6 +1,5 @@
 """Unit tests for the BibTeX export module."""
 
-import pytest
 
 from semantic_scholar_mcp.bibtex import (
     BibTeXEntry,
@@ -18,7 +17,6 @@ from semantic_scholar_mcp.models import (
     OpenAccessPdf,
     Paper,
     PaperExternalIds,
-    PublicationVenue,
 )
 
 
@@ -380,10 +378,7 @@ class TestPaperToBibtexEntry:
             paperId="123",
             title="Test Paper",
             year=2020,
-            authors=[
-                Author(authorId=str(i), name=f"Author {i}")
-                for i in range(10)
-            ],
+            authors=[Author(authorId=str(i), name=f"Author {i}") for i in range(10)],
         )
         config = BibTeXExportConfig(
             fields=BibTeXFieldConfig(max_authors=3),

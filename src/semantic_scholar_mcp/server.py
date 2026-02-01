@@ -4,8 +4,8 @@ This module provides MCP tools for searching and analyzing academic papers
 through the Semantic Scholar API.
 """
 
-import atexit
 import asyncio
+import atexit
 import os
 import threading
 
@@ -528,7 +528,9 @@ async def get_author_details(
             "fields": DEFAULT_PAPER_FIELDS,
             "limit": papers_limit,
         }
-        papers_response = await client.get_with_retry(f"/author/{author_id}/papers", params=papers_params)
+        papers_response = await client.get_with_retry(
+            f"/author/{author_id}/papers", params=papers_params
+        )
         papers_result = AuthorPapersResult(**papers_response)
         papers = papers_result.data
 

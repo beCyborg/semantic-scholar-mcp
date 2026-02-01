@@ -122,10 +122,7 @@ class PaperTracker:
             List of papers from the specified tool.
         """
         with self._papers_lock:
-            matching = [
-                tp for tp in self._papers.values()
-                if tp.source_tool == tool_name
-            ]
+            matching = [tp for tp in self._papers.values() if tp.source_tool == tool_name]
             sorted_tracked = sorted(matching, key=lambda tp: tp.tracked_at)
             return [tp.paper for tp in sorted_tracked]
 

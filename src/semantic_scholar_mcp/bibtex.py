@@ -293,9 +293,7 @@ def paper_to_bibtex_entry(
                 author_names.append("others")
                 fields["author"] = " and ".join(author_names)
             else:
-                fields["author"] = " and ".join(
-                    a.name or "Unknown" for a in authors_list
-                )
+                fields["author"] = " and ".join(a.name or "Unknown" for a in authors_list)
         else:
             fields["author"] = " and ".join(a.name or "Unknown" for a in authors_list)
 

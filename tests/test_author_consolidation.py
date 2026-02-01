@@ -240,9 +240,7 @@ class TestConsolidateAuthors:
 
         with patch("semantic_scholar_mcp.server.get_client") as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.get_with_retry = AsyncMock(
-                side_effect=[author1_response, author2_response]
-            )
+            mock_client.get_with_retry = AsyncMock(side_effect=[author1_response, author2_response])
             mock_get_client.return_value = mock_client
 
             result = await consolidate_authors.fn(["1", "2"], confirm_merge=False)
@@ -274,9 +272,7 @@ class TestConsolidateAuthors:
 
         with patch("semantic_scholar_mcp.server.get_client") as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.get_with_retry = AsyncMock(
-                side_effect=[author1_response, author2_response]
-            )
+            mock_client.get_with_retry = AsyncMock(side_effect=[author1_response, author2_response])
             mock_get_client.return_value = mock_client
 
             result = await consolidate_authors.fn(["1", "2"])
@@ -291,8 +287,8 @@ class TestConsolidateAuthors:
     @pytest.mark.asyncio
     async def test_consolidate_authors_not_found(self) -> None:
         """Test consolidation with non-existent author."""
-        from semantic_scholar_mcp.server import consolidate_authors
         from semantic_scholar_mcp.exceptions import NotFoundError
+        from semantic_scholar_mcp.server import consolidate_authors
 
         with patch("semantic_scholar_mcp.server.get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -324,9 +320,7 @@ class TestConsolidateAuthors:
 
         with patch("semantic_scholar_mcp.server.get_client") as mock_get_client:
             mock_client = AsyncMock()
-            mock_client.get_with_retry = AsyncMock(
-                side_effect=[author1_response, author2_response]
-            )
+            mock_client.get_with_retry = AsyncMock(side_effect=[author1_response, author2_response])
             mock_get_client.return_value = mock_client
 
             result = await consolidate_authors.fn(["1", "2"])
