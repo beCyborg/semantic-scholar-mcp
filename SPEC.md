@@ -289,7 +289,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Remove @mcp.tool() decorators (will be applied in server.py)",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "refactor",
