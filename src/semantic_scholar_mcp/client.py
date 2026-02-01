@@ -6,7 +6,13 @@ from typing import Any
 import httpx
 
 from semantic_scholar_mcp.config import settings
-from semantic_scholar_mcp.exceptions import NotFoundError, RateLimitError, SemanticScholarError
+from semantic_scholar_mcp.exceptions import (
+    AuthenticationError,
+    NotFoundError,
+    RateLimitError,
+    SemanticScholarError,
+    ServerError,
+)
 from semantic_scholar_mcp.rate_limiter import RetryConfig, with_retry
 
 logger = logging.getLogger(__name__)
@@ -92,6 +98,8 @@ class SemanticScholarClient:
         Raises:
             RateLimitError: If rate limit is exceeded (HTTP 429).
             NotFoundError: If resource is not found (HTTP 404).
+            AuthenticationError: If API key is invalid (HTTP 401/403).
+            ServerError: If server returns 5xx error.
             SemanticScholarError: For other HTTP errors.
         """
         logger.info(
@@ -101,8 +109,12 @@ class SemanticScholarClient:
             response.status_code,
         )
 
+        # Success
+        if response.status_code < 400:
+            return response.json()
+
+        # Rate limit exceeded
         if response.status_code == 429:
-            # Extract Retry-After header if present
             retry_after: float | None = None
             retry_after_header = response.headers.get("Retry-After")
             if retry_after_header is not None:
@@ -112,25 +124,39 @@ class SemanticScholarClient:
                     pass
 
             raise RateLimitError(
-                "Rate limit exceeded. The Semantic Scholar API allows 5,000 requests "
-                "per 5 minutes for unauthenticated requests. Consider using an API key "
-                "for higher limits, or wait before retrying.",
+                f"Rate limit exceeded for {endpoint}. "
+                "Consider using an API key for higher limits. "
+                "See: https://www.semanticscholar.org/product/api#api-key",
                 retry_after=retry_after,
             )
 
+        # Authentication errors
+        if response.status_code in (401, 403):
+            raise AuthenticationError(
+                f"Authentication failed for {endpoint}. "
+                "Please verify your API key is valid and has the required permissions."
+            )
+
+        # Not found
         if response.status_code == 404:
             raise NotFoundError(
-                f"Resource not found: {endpoint}. The requested paper, author, or "
-                "other resource does not exist in the Semantic Scholar database. "
-                "Please verify the ID is correct."
+                f"Resource not found: {endpoint}. "
+                "For DOIs, use format 'DOI:10.xxxx/xxxxx'. "
+                "For ArXiv IDs, use format 'ARXIV:xxxx.xxxxx'."
             )
 
-        if response.status_code >= 400:
-            raise SemanticScholarError(
-                f"API request failed with status {response.status_code}: {response.text}"
+        # Server errors (5xx) - these are retriable
+        if 500 <= response.status_code < 600:
+            raise ServerError(
+                f"Semantic Scholar API server error ({response.status_code}) for {endpoint}. "
+                "This is usually temporary. Please try again.",
+                status_code=response.status_code,
             )
 
-        return response.json()
+        # Other client errors (4xx)
+        raise SemanticScholarError(
+            f"API error ({response.status_code}) for {endpoint}: {response.text}"
+        )
 
     async def get(
         self,

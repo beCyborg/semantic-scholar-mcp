@@ -7,9 +7,11 @@ import pytest
 
 from semantic_scholar_mcp.client import SemanticScholarClient
 from semantic_scholar_mcp.exceptions import (
+    AuthenticationError,
     NotFoundError,
     RateLimitError,
     SemanticScholarError,
+    ServerError,
 )
 
 from .conftest import (
@@ -160,7 +162,7 @@ class TestRateLimitError:
 
             error_message = str(exc_info.value)
             assert "Rate limit exceeded" in error_message
-            assert "5,000 requests" in error_message
+            assert "/paper/search" in error_message
             assert "API key" in error_message
 
 
@@ -276,14 +278,58 @@ class TestApiKeyHeader:
             assert "x-api-key" not in headers
 
 
+class TestAuthenticationError:
+    """Tests for HTTP 401/403 authentication error handling."""
+
+    @pytest.mark.asyncio
+    async def test_http_401_raises_authentication_error(
+        self, mock_settings_no_api_key: MagicMock
+    ) -> None:
+        """Test that HTTP 401 raises AuthenticationError."""
+        with patch("semantic_scholar_mcp.client.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.is_closed = False
+            mock_response = create_mock_response(status_code=401, text="Unauthorized")
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            async with SemanticScholarClient() as client:
+                with pytest.raises(AuthenticationError) as exc_info:
+                    await client.get("/paper/search")
+
+            error_message = str(exc_info.value)
+            assert "Authentication failed" in error_message
+            assert "/paper/search" in error_message
+            assert "API key" in error_message
+
+    @pytest.mark.asyncio
+    async def test_http_403_raises_authentication_error(
+        self, mock_settings_no_api_key: MagicMock
+    ) -> None:
+        """Test that HTTP 403 raises AuthenticationError."""
+        with patch("semantic_scholar_mcp.client.httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.is_closed = False
+            mock_response = create_mock_response(status_code=403, text="Forbidden")
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            async with SemanticScholarClient() as client:
+                with pytest.raises(AuthenticationError) as exc_info:
+                    await client.get("/paper/search")
+
+            error_message = str(exc_info.value)
+            assert "Authentication failed" in error_message
+
+
 class TestOtherHttpErrors:
     """Tests for other HTTP error handling."""
 
     @pytest.mark.asyncio
-    async def test_http_500_raises_semantic_scholar_error(
-        self, mock_settings_no_api_key: MagicMock
-    ) -> None:
-        """Test that HTTP 500 raises SemanticScholarError."""
+    async def test_http_500_raises_server_error(self, mock_settings_no_api_key: MagicMock) -> None:
+        """Test that HTTP 500 raises ServerError."""
         with patch("semantic_scholar_mcp.client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client.is_closed = False
@@ -293,11 +339,13 @@ class TestOtherHttpErrors:
             mock_client_class.return_value = mock_client
 
             async with SemanticScholarClient() as client:
-                with pytest.raises(SemanticScholarError) as exc_info:
+                with pytest.raises(ServerError) as exc_info:
                     await client.get("/paper/search")
 
             error_message = str(exc_info.value)
             assert "500" in error_message
+            assert "/paper/search" in error_message
+            assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_http_400_raises_semantic_scholar_error(

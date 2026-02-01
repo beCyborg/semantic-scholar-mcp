@@ -115,3 +115,31 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (132 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:20 (CET)
+
+**Tasks completed:** US-1, US-2, US-3, US-4, US-5
+
+**Current task:** US-6 - Improve _handle_response() error handling in client.py
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/client.py`
+  - Updated imports to include `AuthenticationError` and `ServerError`
+  - Refactored `_handle_response()` to check success first (status < 400)
+  - Added `AuthenticationError` for 401/403 errors with helpful message
+  - Added `ServerError` for 5xx errors with `status_code` attribute
+  - Updated error messages to include endpoint context
+  - Improved `RateLimitError` and `NotFoundError` messages with format hints
+- Modified `tests/test_client.py`
+  - Added imports for `AuthenticationError` and `ServerError`
+  - Updated `test_http_429_raises_rate_limit_error_with_informative_message` to match new message format
+  - Renamed `test_http_500_raises_semantic_scholar_error` to `test_http_500_raises_server_error`
+  - Added `TestAuthenticationError` class with tests for 401 and 403 responses
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (2 pre-existing type errors unrelated to changes)
+- pytest: PASS (134 passed - 2 new tests added)
+
+**Blockers:** None

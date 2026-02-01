@@ -89,7 +89,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Add helpful error messages with endpoint context",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
