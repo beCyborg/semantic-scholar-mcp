@@ -572,3 +572,23 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (137 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:53 (CET)
+
+**Tasks completed:** US-1 through US-25
+
+**Current task:** US-26 - Add test isolation fixtures to conftest.py
+
+**Changes made:**
+- Modified `tests/conftest.py`
+  - Added import for `PaperTracker` from `semantic_scholar_mcp.paper_tracker`
+  - Added `reset_tracker()` autouse fixture that resets PaperTracker singleton before/after each test
+  - `reset_cache()` autouse fixture already existed (added in US-17)
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (3 pre-existing type errors: singleton pattern issues)
+- pytest: PASS (137 passed)
+
+**Blockers:** None

@@ -10,6 +10,15 @@ import pytest_asyncio
 
 from semantic_scholar_mcp.cache import get_cache
 from semantic_scholar_mcp.client import SemanticScholarClient
+from semantic_scholar_mcp.paper_tracker import PaperTracker
+
+
+@pytest.fixture(autouse=True)
+def reset_tracker() -> Generator[None]:
+    """Reset the paper tracker singleton before each test to ensure test isolation."""
+    PaperTracker.reset_instance()
+    yield
+    PaperTracker.reset_instance()
 
 
 @pytest.fixture(autouse=True)
