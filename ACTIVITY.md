@@ -75,3 +75,23 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (132 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:16 (CET)
+
+**Tasks completed:** US-1, US-2, US-3
+
+**Current task:** US-4 - Add logging to bibtex.py
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/bibtex.py`
+- Imported `get_logger` from `logging_config`
+- Added DEBUG log in `paper_to_bibtex_entry()` for entry generation
+- Added INFO log in `export_papers_to_bibtex()` with count of exported entries
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (2 pre-existing type errors unrelated to changes)
+- pytest: PASS (132 passed)
+
+**Blockers:** None

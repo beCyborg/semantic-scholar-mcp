@@ -10,7 +10,10 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+from semantic_scholar_mcp.logging_config import get_logger
 from semantic_scholar_mcp.models import Paper
+
+logger = get_logger("bibtex")
 
 
 class BibTeXEntryType(str, Enum):
@@ -336,11 +339,13 @@ def paper_to_bibtex_entry(
     if config.fields.include_keywords and paper.fieldsOfStudy:
         fields["keywords"] = ", ".join(paper.fieldsOfStudy)
 
-    return BibTeXEntry(
+    entry = BibTeXEntry(
         entry_type=entry_type,
         cite_key=cite_key,
         fields=fields,
     )
+    logger.debug("Generated BibTeX entry: %s (type: %s)", cite_key, entry_type.value)
+    return entry
 
 
 def export_papers_to_bibtex(
@@ -377,4 +382,5 @@ def export_papers_to_bibtex(
         seen_keys.add(entry.cite_key)
         entries.append(entry.to_bibtex())
 
+    logger.info("Exported %d papers to BibTeX format", len(entries))
     return "\n\n".join(entries)
