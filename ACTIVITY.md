@@ -213,3 +213,25 @@ Append activity log at bottom. Follow the template:
 - pytest: PASS (137 passed)
 
 **Blockers:** None
+
+### 2026-02-01 16:28 (CET)
+
+**Tasks completed:** US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8, US-9
+
+**Current task:** US-10 - Integrate TokenBucket into client.py
+
+**Changes made:**
+- Modified `src/semantic_scholar_mcp/client.py`
+  - Added imports for `TokenBucket` and `create_rate_limiter` from rate_limiter
+  - Initialized `_rate_limiter` in `__init__` using `create_rate_limiter(settings.has_api_key)`
+  - Added `await self._rate_limiter.acquire()` before each request in `get()`
+  - Added `await self._rate_limiter.acquire()` before each request in `post()`
+  - Added DEBUG log when rate limiter causes wait
+
+**Verification:**
+- ruff format: PASS
+- ruff check: PASS
+- ty check: PASS (2 pre-existing type errors unrelated to changes)
+- pytest: PASS (137 passed)
+
+**Blockers:** None

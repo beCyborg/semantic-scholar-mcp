@@ -14,7 +14,12 @@ from semantic_scholar_mcp.exceptions import (
     SemanticScholarError,
     ServerError,
 )
-from semantic_scholar_mcp.rate_limiter import RetryConfig, with_retry
+from semantic_scholar_mcp.rate_limiter import (
+    RetryConfig,
+    TokenBucket,
+    create_rate_limiter,
+    with_retry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +57,7 @@ class SemanticScholarClient:
         )
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
+        self._rate_limiter: TokenBucket = create_rate_limiter(settings.has_api_key)
 
     def _get_headers(self) -> dict[str, str]:
         """Get request headers including API key if configured.
@@ -191,6 +197,11 @@ class SemanticScholarClient:
 
         logger.info("API request: method=GET endpoint=%s params=%s", endpoint, params)
 
+        # Acquire rate limit token before making request
+        wait_time = await self._rate_limiter.acquire()
+        if wait_time > 0:
+            logger.debug("Rate limiter: waited %.2fs before request", wait_time)
+
         client = await self._get_client()
         try:
             response = await client.get(url, params=params)
@@ -233,6 +244,11 @@ class SemanticScholarClient:
         url = f"{base_url}{endpoint}"
 
         logger.info("API request: method=POST endpoint=%s params=%s", endpoint, params)
+
+        # Acquire rate limit token before making request
+        wait_time = await self._rate_limiter.acquire()
+        if wait_time > 0:
+            logger.debug("Rate limiter: waited %.2fs before request", wait_time)
 
         client = await self._get_client()
         try:

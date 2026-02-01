@@ -144,7 +144,7 @@ Comprehensive improvement plan for the Semantic Scholar MCP server addressing 8 
       "Add DEBUG log when rate limiter causes wait",
       "Typecheck passes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "setup",
