@@ -64,3 +64,18 @@ Append activity log at bottom. Follow the template:
 - `uv run ty check src/`: 4 pre-existing diagnostics (unrelated to this change)
 
 **Blockers:** None
+
+### 2026-02-02 14:31 (CET)
+
+**Task completed:** US-11: Add test coverage reporting
+
+**Changes made:**
+- `pyproject.toml`: Added `pytest-cov>=4.0` to dev dependencies; added `addopts = "--cov=semantic_scholar_mcp --cov-report=term-missing"` to pytest config
+
+**Verification:**
+- `uv run ruff check src/ tests/`: All checks passed!
+- `uv run ruff format src/ tests/`: 30 files left unchanged
+- `uv run pytest -v`: 193 passed, 6 failed (integration tests failing due to SSL certificate issues - unrelated to this change); coverage report generated showing 87% total coverage
+- `uv run ty check src/`: 4 pre-existing diagnostics (unrelated to this change)
+
+**Blockers:** None
