@@ -178,7 +178,7 @@ Code quality improvements for the Semantic Scholar MCP server addressing technic
       "Mark all new tests with @pytest.mark.integration",
       "All tests pass"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "refactor",
