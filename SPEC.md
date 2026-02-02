@@ -81,7 +81,7 @@ Code quality improvements for the Semantic Scholar MCP server addressing technic
       "All tests pass",
       "Type checker passes (uv run ty check src/)"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "refactor",

@@ -26,6 +26,25 @@ DEFAULT_AUTHOR_FIELDS = (
 PAPER_FIELDS_WITH_TLDR = f"{DEFAULT_PAPER_FIELDS},tldr"
 
 
+def build_nested_paper_fields(prefix: str) -> str:
+    """Build nested paper fields string for API requests.
+
+    When fetching citations or references, the API requires field names to be
+    prefixed with the nested object name (e.g., 'citingPaper.title').
+
+    Args:
+        prefix: The prefix to prepend to each field (e.g., 'citingPaper', 'citedPaper').
+
+    Returns:
+        A comma-separated string of prefixed field names.
+
+    Example:
+        >>> build_nested_paper_fields('citingPaper')
+        'citingPaper.paperId,citingPaper.title,citingPaper.abstract,...'
+    """
+    return f"{prefix}.{DEFAULT_PAPER_FIELDS.replace(',', f',{prefix}.')}"
+
+
 def paper_not_found_message(paper_id: str) -> str:
     """Generate a user-friendly error message for paper not found errors.
 
