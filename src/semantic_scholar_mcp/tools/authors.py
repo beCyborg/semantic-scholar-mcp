@@ -522,47 +522,27 @@ async def get_author_top_papers(
 
     author = Author(**author_response)
 
-    # Determine how many papers to fetch
-    # The author papers endpoint doesn't support sorting by citations, so we must
-    # fetch all papers and sort client-side to find the true top papers
-    # API limit: 1000 per request, 10000 total for an author
-    total_papers = author.paperCount or 0
-    fetch_limit = min(10000, total_papers) if total_papers > 0 else 1000
+    # Fetch papers using server-side sorting by citation count (highest first)
+    # When min_citations is specified, fetch extra papers to account for filtering
+    fetch_limit = top_n * 3 if min_citations is not None else top_n
 
-    # Fetch papers with pagination to get enough for sorting
-    all_papers: list[Paper] = []
-    offset = 0
+    papers_params: dict[str, str | int] = {
+        "fields": DEFAULT_PAPER_FIELDS,
+        "limit": fetch_limit,
+        "sort": "citationCount:desc",
+    }
+    papers_response = await client.get_with_retry(
+        f"/author/{author_id}/papers", params=papers_params
+    )
+    papers_result = AuthorPapersResult(**papers_response)
+    papers = papers_result.data
 
-    while len(all_papers) < fetch_limit and (total_papers == 0 or offset < total_papers):
-        papers_params: dict[str, str | int] = {
-            "fields": DEFAULT_PAPER_FIELDS,
-            "limit": min(1000, fetch_limit - len(all_papers)),  # Max 1000 per API request
-            "offset": offset,
-        }
-        papers_response = await client.get_with_retry(
-            f"/author/{author_id}/papers", params=papers_params
-        )
-        papers_result = AuthorPapersResult(**papers_response)
-
-        if not papers_result.data:
-            break
-
-        all_papers.extend(papers_result.data)
-        offset += len(papers_result.data)
-
-        # Stop if we got fewer papers than requested (no more available)
-        if len(papers_result.data) < papers_params["limit"]:
-            break
-
-    # Apply min_citations filter if specified
+    # Apply min_citations filter if specified (client-side filtering)
     if min_citations is not None:
-        all_papers = [p for p in all_papers if (p.citationCount or 0) >= min_citations]
+        papers = [p for p in papers if (p.citationCount or 0) >= min_citations]
 
-    # Sort by citation count (highest first)
-    sorted_papers = sort_by_citations(all_papers)
-
-    # Take top N
-    top_papers = sorted_papers[:top_n]
+    # Take top N (already sorted by API)
+    top_papers = papers[:top_n]
 
     # Track papers for BibTeX export
     if top_papers:
@@ -574,6 +554,6 @@ async def get_author_top_papers(
         author_name=author.name,
         total_papers=author.paperCount,
         total_citations=author.citationCount,
-        papers_fetched=len(all_papers),
+        papers_fetched=len(papers_result.data),
         top_papers=top_papers,
     )

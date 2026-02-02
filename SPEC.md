@@ -2,9 +2,9 @@
 
 ## Overview
 
-Code quality improvements for the Semantic Scholar MCP server addressing technical debt: Python builtin shadowing (`ConnectionError`), silent exception handlers, duplicated code patterns, incomplete linting configuration, and missing test coverage for critical paths.
+Optimize the Semantic Scholar MCP server to reduce API calls, decrease response sizes, and improve reliability. The main issue is that `get_author_top_papers` incorrectly assumes the API doesn't support server-side sorting, leading to excessive API calls (up to 10,000 papers fetched) and large responses (~10.8k tokens). The API actually supports `sort=citationCount:desc`, which eliminates this problem.
 
-**Reference:** `tasks/prd-code-quality-improvements.md`
+**Reference:** `PRD.md`
 
 ---
 
@@ -13,186 +13,86 @@ Code quality improvements for the Semantic Scholar MCP server addressing technic
 ```json
 [
   {
-    "category": "refactor",
+    "category": "feature",
     "id": "US-1",
-    "title": "Rename ConnectionError to avoid builtin shadowing",
-    "description": "As a developer, I want the custom connection exception renamed to APIConnectionError so that Python's builtin ConnectionError is not shadowed and code behaves predictably",
+    "title": "Implement server-side sorting for author papers",
+    "description": "As an MCP user, I want get_author_top_papers to use the API's native sorting capability so that I get results quickly without hitting rate limits",
     "steps": [
-      "Rename ConnectionError to APIConnectionError in src/semantic_scholar_mcp/exceptions.py",
-      "Update all imports and usages in src/semantic_scholar_mcp/client.py (8 occurrences)",
-      "Update all imports and usages in tests/test_client.py",
-      "All tests pass (uv run pytest)",
-      "No ruff errors (uv run ruff check src/ tests/)"
+      "Add sort=citationCount:desc parameter to author papers API request in tools/authors.py",
+      "Remove pagination loop - only fetch top_n papers directly",
+      "Remove or correct the incorrect comment about API sorting capability",
+      "Update papers_fetched field in AuthorTopPapers response to reflect actual count",
+      "Ensure min_citations filter is applied after API response (client-side filtering)",
+      "Typecheck passes",
+      "All tests pass"
     ],
     "passes": true
   },
   {
-    "category": "refactor",
+    "category": "setup",
     "id": "US-2",
-    "title": "Add logging to silent exception handlers",
-    "description": "As a developer, I want exceptions logged in cleanup handlers so that I can debug issues during client shutdown",
+    "title": "Strip whitespace from API key configuration",
+    "description": "As a developer configuring the MCP server, I want API keys with accidental whitespace to be handled correctly so that I don't experience silent authentication failures",
     "steps": [
-      "Add logger.debug call to exception handler in server.py:_cleanup_client()",
-      "Log message format: logger.debug('Error during client cleanup: %s', e)",
-      "Verify existing behavior preserved (cleanup still runs, exceptions still caught)",
+      "Modify config.py to strip leading/trailing whitespace from SEMANTIC_SCHOLAR_API_KEY",
+      "Treat whitespace-only API keys as missing (None)",
+      "Add unit test verifying whitespace stripping behavior",
+      "Add unit test verifying whitespace-only keys return None",
+      "Typecheck passes",
       "All tests pass"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "category": "setup",
-    "id": "US-10",
-    "title": "Add comprehensive ruff linting rules",
-    "description": "As a developer, I want strict linting rules so that code quality issues are caught automatically",
-    "steps": [
-      "Add rules B (bugbear), C4 (comprehensions), SIM (simplify) to pyproject.toml",
-      "Add ignore = ['E501'] for line length",
-      "Add isort configuration with known-first-party = ['semantic_scholar_mcp']",
-      "Fix any new violations in src/ and tests/",
-      "All files pass uv run ruff check src/ tests/",
-      "All files formatted with uv run ruff format src/ tests/"
-    ],
-    "passes": true
-  },
-  {
-    "category": "setup",
-    "id": "US-11",
-    "title": "Add test coverage reporting",
-    "description": "As a developer, I want test coverage reports so that I can identify untested code paths",
-    "steps": [
-      "Add pytest-cov>=4.0 to dev dependencies in pyproject.toml",
-      "Add addopts = '--cov=semantic_scholar_mcp --cov-report=term-missing' to pytest config",
-      "Run uv sync to install new dependency",
-      "Verify coverage report generated when running uv run pytest",
-      "All tests pass"
-    ],
-    "passes": true
-  },
-  {
-    "category": "refactor",
+    "category": "feature",
     "id": "US-3",
-    "title": "Extract DRY helper for nested paper fields",
-    "description": "As a developer, I want a reusable helper function for building nested paper fields so that I don't repeat the field transformation logic",
+    "title": "Use compact field sets for list responses",
+    "description": "As an MCP user, I want search and list responses to include only essential fields so that responses are smaller and don't fill my context window",
     "steps": [
-      "Add build_nested_paper_fields(prefix: str) -> str function to src/semantic_scholar_mcp/tools/_common.py",
-      "Add docstring documenting the function purpose and usage",
-      "Update papers.py to use helper for citingPaper fields (get_paper_citations)",
-      "Update papers.py to use helper for citedPaper fields (get_paper_references)",
-      "All tests pass",
-      "Type checker passes (uv run ty check src/)"
+      "Define COMPACT_PAPER_FIELDS constant in tools/_common.py with: paperId, title, abstract, year, citationCount, authors, venue, openAccessPdf, fieldsOfStudy",
+      "Update search_papers to use COMPACT_PAPER_FIELDS",
+      "Update get_paper_citations to use compact fields for citingPaper",
+      "Update get_paper_references to use compact fields for citedPaper",
+      "Update get_author_top_papers to use COMPACT_PAPER_FIELDS",
+      "Verify get_paper_details continues using DEFAULT_PAPER_FIELDS (full fields)",
+      "Typecheck passes",
+      "All tests pass"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "category": "refactor",
+    "category": "setup",
     "id": "US-4",
-    "title": "Extract DRY helper for sorting by citations",
-    "description": "As a developer, I want a reusable helper function for sorting items by citation count so that I don't repeat the sorting lambda pattern",
+    "title": "Environment variable configuration for default limits",
+    "description": "As a developer deploying the MCP server, I want to configure default result limits via environment variables so that I can tune response sizes for my use case",
     "steps": [
-      "Add sort_by_citations[T]() generic helper to src/semantic_scholar_mcp/tools/_common.py",
-      "Use type parameter for generic typing",
-      "Add docstring documenting the function purpose and usage",
-      "Update authors.py to use helper in get_author_details (papers sorting)",
-      "Update authors.py to use helper in get_author_top_papers (top papers sorting)",
-      "Update authors.py to use helper in find_duplicate_authors (candidates sorting)",
-      "Update authors.py to use helper in consolidate_authors (papers sorting)",
-      "All tests pass",
-      "Type checker passes (uv run ty check src/)"
+      "Add SS_DEFAULT_SEARCH_LIMIT to config.py (default: 10, max: 100)",
+      "Add SS_DEFAULT_PAPERS_LIMIT to config.py (default: 10, max: 1000)",
+      "Add SS_DEFAULT_CITATIONS_LIMIT to config.py (default: 50, max: 1000)",
+      "Add validation for positive integers within API limits",
+      "Add unit tests verifying configuration is read correctly",
+      "Add unit tests verifying defaults are applied when env vars not set",
+      "Update README.md with new configuration options",
+      "Typecheck passes",
+      "All tests pass"
     ],
-    "passes": true
+    "passes": false
   },
   {
-    "category": "testing",
+    "category": "feature",
     "id": "US-5",
-    "title": "Add tests for server initialization and lifecycle",
-    "description": "As a developer, I want tests for server initialization so that I can catch regressions in tool registration and client lifecycle",
+    "title": "Log warnings for large API responses",
+    "description": "As a developer debugging the MCP server, I want large responses to be logged so that I can identify performance issues",
     "steps": [
-      "Create new file tests/test_server_init.py",
-      "Add test for server creation (mcp instance exists)",
-      "Add test for tool registration (verify 14 tools registered)",
-      "Add test for client singleton behavior (same instance returned)",
-      "Add test for cleanup handler registration (atexit registered)",
-      "Use appropriate fixtures from conftest.py",
+      "Add SS_LARGE_RESPONSE_THRESHOLD to config.py (default: 50000 bytes)",
+      "Add response size logging in client.py when response exceeds threshold",
+      "Log at WARNING level with endpoint name and response size in bytes",
+      "Measure size before JSON parsing (raw bytes)",
+      "Add unit test verifying warning is logged for large responses",
+      "Typecheck passes",
       "All tests pass"
     ],
-    "passes": true
-  },
-  {
-    "category": "testing",
-    "id": "US-6",
-    "title": "Add tests for configuration validation",
-    "description": "As a developer, I want tests for configuration handling so that I can ensure environment variables and defaults work correctly",
-    "steps": [
-      "Create new file tests/test_config.py",
-      "Add test for default configuration values",
-      "Add test for environment variable loading (SEMANTIC_SCHOLAR_API_KEY)",
-      "Add test for API key presence handling",
-      "Add test for API key absence handling",
-      "All tests pass"
-    ],
-    "passes": true
-  },
-  {
-    "category": "testing",
-    "id": "US-8",
-    "title": "Add tests for error flow from client through tools",
-    "description": "As a developer, I want tests for error propagation so that I can ensure exceptions flow correctly from client to tool layer",
-    "steps": [
-      "Create new file tests/test_error_propagation.py",
-      "Add test for RateLimitError propagation with retry_after attribute",
-      "Add test for NotFoundError propagation with message",
-      "Add test for ServerError propagation with status_code attribute",
-      "Add test for AuthenticationError propagation",
-      "Add test for APIConnectionError propagation",
-      "Test error handling in search_papers tool function",
-      "Test error handling in get_paper_details tool function",
-      "All tests pass"
-    ],
-    "passes": true
-  },
-  {
-    "category": "testing",
-    "id": "US-7",
-    "title": "Add tests for Pydantic model validation",
-    "description": "As a developer, I want tests for Pydantic models so that I can ensure data validation and edge cases are handled correctly",
-    "steps": [
-      "Create new file tests/test_models.py",
-      "Add tests for Paper model (required fields, optional fields, defaults)",
-      "Add tests for Author model (required fields, optional fields, defaults)",
-      "Add tests for edge cases (empty strings, None values, missing optional fields)",
-      "Add tests for model serialization (model_dump)",
-      "Add tests for model deserialization (model_validate)",
-      "All tests pass"
-    ],
-    "passes": true
-  },
-  {
-    "category": "testing",
-    "id": "US-9",
-    "title": "Add end-to-end workflow integration tests",
-    "description": "As a developer, I want comprehensive integration tests so that I can verify complete workflows function correctly",
-    "steps": [
-      "Add paper workflow test: search -> details -> citations -> export BibTeX",
-      "Add author workflow test: search -> details -> top papers",
-      "Add BibTeX export workflow test: track papers -> export -> verify format",
-      "Mark all new tests with @pytest.mark.integration",
-      "All tests pass"
-    ],
-    "passes": true
-  },
-  {
-    "category": "refactor",
-    "id": "US-12",
-    "title": "Simplify verbose BibTeX escape comments",
-    "description": "As a developer, I want concise comments in the BibTeX module so that the code is easier to read without losing important context",
-    "steps": [
-      "Locate verbose comments in src/semantic_scholar_mcp/bibtex.py (lines 103-118)",
-      "Keep only the 'order matters' note explaining why backslash must be first",
-      "Remove step-by-step explanatory comments",
-      "Verify code behavior unchanged (existing tests pass)",
-      "All tests pass"
-    ],
-    "passes": true
+    "passes": false
   }
 ]
 ```
@@ -203,26 +103,43 @@ Code quality improvements for the Semantic Scholar MCP server addressing technic
 
 **Linting:**
 ```bash
-uv run ruff check src/ tests/
-uv run ruff format src/ tests/
+uv run ruff check .
 ```
 
 **Type checking:**
 ```bash
-uv run ty check src/
+uv run ty check
 ```
 
 **Tests:**
 ```bash
-uv run pytest -v
+uv run pytest tests/
 ```
 
-**Integration tests:**
+**Run:**
 ```bash
-uv run pytest tests/test_integration.py -v -m integration
+uv run semantic-scholar-mcp
 ```
 
-**Full verification (run after each task):**
-```bash
-uv run ruff check src/ tests/ && uv run ruff format src/ tests/ && uv run pytest -v && uv run ty check src/
-```
+---
+
+## Implementation Order
+
+Tasks are ordered by priority:
+
+1. **US-1** (P0 Critical): API sorting - biggest impact on rate limits and response size
+2. **US-2** (P1 High): API key whitespace - quick fix, prevents configuration bugs
+3. **US-3** (P1 High): Compact fields - reduces response size by 30-40%
+4. **US-4** (P2 Medium): Configurable limits - nice to have after core optimizations
+5. **US-5** (P3 Low): Response size logging - debugging aid
+
+---
+
+## Success Criteria
+
+| Metric | Before | After |
+|--------|--------|-------|
+| API calls (top 5 papers) | 2-11 | 2 |
+| Response size (top papers) | 50-500KB | ~5KB |
+| Token usage per query | ~10k | ~1-2k |
+| Rate limit errors | Frequent | Rare |

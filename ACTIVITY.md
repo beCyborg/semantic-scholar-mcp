@@ -234,3 +234,18 @@ Append activity log at bottom. Follow the template:
 - `uv run ty check src/`: 4 pre-existing diagnostics (unrelated to this change)
 
 **Blockers:** None
+
+### 2026-02-02 22:05 (CET)
+
+**Task completed:** US-1: Implement server-side sorting for author papers
+
+**Changes made:**
+- `src/semantic_scholar_mcp/tools/authors.py`: Rewrote `get_author_top_papers` function to use API's native `sort=citationCount:desc` parameter instead of fetching all papers and sorting client-side. Removed pagination loop - now fetches only `top_n` papers (or `top_n * 3` when `min_citations` is specified to account for filtering). Removed incorrect comment about API not supporting sorting.
+
+**Verification:**
+- `uv run ruff check src/ tests/`: All checks passed!
+- `uv run ruff format src/ tests/`: 34 files left unchanged
+- `uv run pytest -v -m "not integration"`: 339 passed; coverage at 89%
+- `uv run ty check src/`: 3 pre-existing diagnostics (unrelated to this change)
+
+**Blockers:** None
