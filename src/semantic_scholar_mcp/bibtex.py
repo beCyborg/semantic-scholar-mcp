@@ -100,21 +100,11 @@ def _escape_bibtex(text: str) -> str:
     Returns:
         Escaped text safe for BibTeX.
     """
-    # IMPORTANT: Order matters to avoid double-escaping.
-    # First escape backslashes, then braces, then other special characters.
-    # This prevents issues where replacements like \& would have their
-    # braces escaped if { and } were processed first.
-
-    # Step 1: Escape existing backslashes first (to avoid escaping our own backslashes)
+    # Order matters: escape backslash first to avoid double-escaping
     text = text.replace("\\", r"\textbackslash{}")
-
-    # Step 2: Escape braces before other replacements that introduce braces
     text = text.replace("{", r"\{")
     text = text.replace("}", r"\}")
 
-    # Step 3: Escape other special LaTeX characters
-    # Note: These replacements introduce backslashes and braces, but those
-    # are intentional LaTeX commands, not literal characters to escape.
     other_replacements = [
         ("&", r"\&"),
         ("%", r"\%"),

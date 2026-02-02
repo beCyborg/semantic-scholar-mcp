@@ -219,3 +219,18 @@ Append activity log at bottom. Follow the template:
 - `uv run ty check src/`: 4 pre-existing diagnostics (unrelated to this change)
 
 **Blockers:** None
+
+### 2026-02-02 15:12 (CET)
+
+**Task completed:** US-12: Simplify verbose BibTeX escape comments
+
+**Changes made:**
+- `src/semantic_scholar_mcp/bibtex.py`: Simplified verbose comments in `_escape_bibtex` function (lines 103-118). Removed step-by-step explanatory comments and kept only a concise "order matters" note explaining why backslash must be escaped first.
+
+**Verification:**
+- `uv run ruff check src/ tests/`: All checks passed!
+- `uv run ruff format src/ tests/`: 34 files left unchanged
+- `uv run pytest -v -m "not integration"`: 339 passed; coverage at 88%
+- `uv run ty check src/`: 4 pre-existing diagnostics (unrelated to this change)
+
+**Blockers:** None
