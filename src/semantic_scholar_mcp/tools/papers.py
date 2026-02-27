@@ -23,6 +23,20 @@ from semantic_scholar_mcp.tools._common import (
 )
 
 
+def _parse_year_filter(year: str) -> tuple[int, int]:
+    """Parse year filter string into (min_year, max_year) tuple."""
+    if "-" in year:
+        parts = year.split("-", 1)
+        return int(parts[0]), int(parts[1])
+    return int(year), int(year)
+
+
+def _filter_by_year(papers: list[Paper], year: str) -> list[Paper]:
+    """Filter papers by year range (client-side)."""
+    min_year, max_year = _parse_year_filter(year)
+    return [p for p in papers if p.year is not None and min_year <= p.year <= max_year]
+
+
 async def search_papers(
     query: str,
     year: str | None = None,
@@ -187,6 +201,11 @@ async def get_paper_citations(
         limit: Maximum number of citing papers to return (1-1000, default 100).
         year: Optional year filter in format "YYYY" for single year or
             "YYYY-YYYY" for range (e.g., "2020" or "2020-2024").
+            Note: Filtering is performed client-side because the S2 citations
+            API does not support a year parameter. When a year filter is active,
+            more results are fetched internally and then filtered, so the actual
+            number of returned papers may be less than ``limit`` for narrow
+            year ranges.
 
     Returns:
         List of papers that cite the given paper, each containing:
@@ -210,14 +229,15 @@ async def get_paper_citations(
     # Validate limit
     limit = max(1, min(1000, limit))
 
-    # Build query parameters
+    # When year filter is active, fetch more results to compensate for
+    # client-side filtering (the citations API does not support year param).
+    fetch_limit = min(limit * 10, 1000) if year is not None else limit
+
+    # Build query parameters (year is NOT passed — unsupported by this endpoint)
     params: dict[str, str | int] = {
         "fields": build_nested_paper_fields("citingPaper", compact=True),
-        "limit": limit,
+        "limit": fetch_limit,
     }
-
-    if year is not None:
-        params["year"] = year
 
     # Make API request with automatic retry on rate limits
     client = get_client()
@@ -241,6 +261,20 @@ async def get_paper_citations(
     for item in data:
         citing_paper_data = CitingPaper(**item)
         citing_papers.append(citing_paper_data.citingPaper)
+
+    # Apply client-side year filter
+    if year is not None:
+        citing_papers = _filter_by_year(citing_papers, year)
+
+    # Trim to requested limit
+    citing_papers = citing_papers[:limit]
+
+    # Handle case where year filter removed all results
+    if not citing_papers:
+        return (
+            f"No citations found for paper '{paper_id}' in the year range '{year}'. "
+            "Try broadening the year range."
+        )
 
     # Track papers for BibTeX export
     tracker = get_tracker()

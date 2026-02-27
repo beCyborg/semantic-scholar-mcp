@@ -37,7 +37,8 @@ async def get_recommendations(
         limit: Maximum number of recommended papers to return (default 10).
         from_pool: The pool of papers to recommend from:
             - "recent": Recently published papers (default). Good for finding
-              the latest related work.
+              the latest related work. If no results are found (common for
+              older seed papers), automatically falls back to "all-cs".
             - "all-cs": All Computer Science papers. Good for comprehensive
               literature coverage.
 
@@ -87,12 +88,26 @@ async def get_recommendations(
     # Parse response
     result = RecommendationResult(**response)
 
+    # Fallback: if "recent" pool returned nothing, try "all-cs"
+    if not result.recommendedPapers and from_pool == "recent":
+        params["from"] = "all-cs"
+        try:
+            response = await client.get_with_retry(
+                f"/papers/forpaper/{paper_id}",
+                params=params,
+                use_recommendations_api=True,
+            )
+        except NotFoundError:
+            return paper_not_found_message(paper_id)
+        result = RecommendationResult(**response)
+
     # Handle empty recommendations
     if not result.recommendedPapers:
         return (
-            f"No recommendations found for paper '{paper_id}'. This may happen for "
-            "very new papers, papers in niche fields, or papers not well-covered "
-            "in the recommendation model's training data."
+            f"No recommendations found for paper '{paper_id}'. Both 'recent' and "
+            "'all-cs' pools were tried. This may happen for very new papers, papers "
+            "in niche fields, or papers not well-covered in the recommendation "
+            "model's training data."
         )
 
     # Track papers for BibTeX export
